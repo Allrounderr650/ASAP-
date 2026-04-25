@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASAP — AI Study Assistant Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a12;
+    --bg2: #111120;
+    --bg3: #181830;
+    --surface: #1e1e38;
+    --surface2: #252545;
+    --border: rgba(120,120,255,0.12);
+    --border2: rgba(120,120,255,0.22);
+    --accent: #7c6af7;
+    --accent2: #a78bfa;
+    --accent3: #c4b5fd;
+    --teal: #2dd4bf;
+    --teal2: #5eead4;
+    --coral: #f87171;
+    --amber: #fbbf24;
+    --green: #34d399;
+    --text: #f0eeff;
+    --text2: #9b97c4;
+    --text3: #6560a0;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 10%, rgba(124,106,247,0.1) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 80% 80%, rgba(45,212,191,0.07) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* LAYOUT */
+  .app { display: flex; height: 100vh; position: relative; z-index: 1; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 260px;
+    min-width: 260px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+    overflow-y: auto;
+  }
+
+  .logo {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    color: var(--accent2);
+    letter-spacing: -0.5px;
+  }
+  .logo-sub {
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .sidebar-section { padding: 16px 12px 8px; }
+  .sidebar-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 0 8px;
+    margin-bottom: 6px;
+  }
+
+  .nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .nav-btn:hover { background: var(--surface); color: var(--text); }
+  .nav-btn.active { background: rgba(124,106,247,0.15); color: var(--accent2); }
+  .nav-icon { width: 18px; height: 18px; opacity: 0.8; flex-shrink: 0; }
+
+  /* MOOD PANEL in sidebar */
+  .mood-panel {
+    margin: 12px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 14px;
+    border: 1px solid var(--border);
+  }
+  .mood-title { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; }
+  .mood-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .mood-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 6px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .mood-btn:hover { border-color: var(--border2); background: var(--surface2); transform: scale(1.03); }
+  .mood-btn.selected { border-color: var(--accent); background: rgba(124,106,247,0.15); }
+  .mood-emoji { font-size: 20px; }
+  .mood-label { font-size: 10px; color: var(--text2); font-weight: 500; }
+  .mood-btn.selected .mood-label { color: var(--accent2); }
+
+  .mood-meter {
+    margin-top: 12px;
+    background: var(--bg3);
+    border-radius: 4px;
+    height: 4px;
+    overflow: hidden;
+  }
+  .mood-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--coral), var(--amber), var(--green));
+    transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .mood-status { font-size: 11px; color: var(--text3); margin-top: 6px; text-align: center; }
+
+  /* MAIN CONTENT */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    gap: 16px;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .page-title { font-size: 18px; font-weight: 500; color: var(--text); }
+  .subject-tag {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(124,106,247,0.15);
+    color: var(--accent2);
+    border: 1px solid rgba(124,106,247,0.25);
+  }
+
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .streak-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    background: rgba(251,191,36,0.1);
+    border: 1px solid rgba(251,191,36,0.25);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--amber);
+    font-weight: 600;
+  }
+
+  .subject-select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 7px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    outline: none;
+  }
+  .subject-select:focus { border-color: var(--accent); }
+
+  /* CONTENT AREA */
+  .content { flex: 1; display: flex; overflow: hidden; }
+
+  /* CHAT PANEL */
+  .chat-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface2) transparent;
+  }
+
+  .msg {
+    display: flex;
+    gap: 12px;
+    max-width: 88%;
+    animation: fadeUp 0.25s ease;
+  }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+  .msg-avatar.ai { background: rgba(124,106,247,0.2); border: 1px solid rgba(124,106,247,0.3); color: var(--accent2); font-size: 13px; }
+  .msg-avatar.user { background: rgba(45,212,191,0.15); border: 1px solid rgba(45,212,191,0.25); color: var(--teal2); font-size: 13px; }
+
+  .msg-body { display: flex; flex-direction: column; gap: 4px; }
+  .msg-name { font-size: 11px; font-weight: 600; color: var(--text3); }
+  .msg.user .msg-name { text-align: right; }
+
+  .bubble {
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text);
+  }
+  .bubble.ai {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top-left-radius: 4px;
+  }
+  .bubble.user {
+    background: rgba(124,106,247,0.18);
+    border: 1px solid rgba(124,106,247,0.25);
+    border-top-right-radius: 4px;
+  }
+  .bubble code {
+    background: var(--bg3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--teal2);
+  }
+  .bubble .math {
+    display: inline-block;
+    background: var(--bg3);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-style: italic;
+    color: var(--amber);
+    margin: 2px 0;
+  }
+  .bubble ul { padding-left: 18px; margin-top: 6px; }
+  .bubble li { margin-bottom: 4px; }
+  .bubble strong { color: var(--accent3); }
+
+  .mood-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(45,212,191,0.1);
+    color: var(--teal2);
+    border: 1px solid rgba(45,212,191,0.15);
+    margin-top: 4px;
+    align-self: flex-start;
+  }
+
+  /* TYPING INDICATOR */
+  .typing { display: flex; align-items: center; gap: 5px; padding: 14px 16px; }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: bounce 1.2s infinite;
+  }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-6px); opacity: 1; }
+  }
+
+  /* INPUT BAR */
+  .input-bar {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 8px 8px 16px;
+    transition: border-color 0.2s;
+  }
+  .input-row:focus-within { border-color: var(--accent); }
+
+  #userInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    resize: none;
+    min-height: 22px;
+    max-height: 120px;
+    line-height: 1.5;
+  }
+  #userInput::placeholder { color: var(--text3); }
+
+  .input-actions { display: flex; gap: 6px; align-items: center; }
+  .icon-btn {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--text2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .icon-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border2); }
+
+  .send-btn {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-size: 16px;
+  }
+  .send-btn:hover { background: var(--accent2); transform: scale(1.05); }
+  .send-btn:active { transform: scale(0.95); }
+
+  .quick-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .quick-btn {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-family: inherit;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .quick-btn:hover { border-color: var(--accent); color: var(--accent2); background: rgba(124,106,247,0.1); }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    width: 280px;
+    min-width: 280px;
+    border-left: 1px solid var(--border);
+    background: var(--bg2);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .panel-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .panel-card-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 12px;
+  }
+
+  /* STATS */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-item {
+    background: var(--bg3);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    text-align: center;
+  }
+  .stat-num { font-size: 22px; font-weight: 600; color: var(--text); }
+  .stat-unit { font-size: 10px; color: var(--text3); }
+  .stat-label { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  /* FOCUS TIMER */
+  .timer-display {
+    text-align: center;
+    padding: 10px 0;
+  }
+  .timer-ring { position: relative; width: 90px; height: 90px; margin: 0 auto 10px; }
+  .timer-ring svg { transform: rotate(-90deg); }
+  .timer-ring .ring-bg { fill: none; stroke: var(--bg3); stroke-width: 6; }
+  .timer-ring .ring-fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 245; stroke-dashoffset: 245; transition: stroke-dashoffset 1s linear; }
+  .timer-time {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .timer-label { font-size: 11px; color: var(--text3); margin-bottom: 10px; }
+  .timer-btns { display: flex; gap: 8px; justify-content: center; }
+  .timer-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .timer-btn:hover { border-color: var(--accent); color: var(--accent2); }
+  .timer-btn.active { background: rgba(124,106,247,0.2); border-color: var(--accent); color: var(--accent2); }
+
+  /* PROGRESS */
+  .topic-list { display: flex; flex-direction: column; gap: 8px; }
+  .topic-item { display: flex; flex-direction: column; gap: 4px; }
+  .topic-info { display: flex; justify-content: space-between; align-items: center; }
+  .topic-name { font-size: 12px; color: var(--text2); }
+  .topic-pct { font-size: 11px; color: var(--text3); }
+  .prog-bar { height: 4px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+
+  /* FLASHCARD */
+  .flashcard {
+    background: var(--bg3);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    line-height: 1.5;
+    border: 1px solid var(--border);
+    user-select: none;
+  }
+  .flashcard:hover { border-color: var(--border2); }
+  .flashcard .flip-hint { font-size: 10px; color: var(--text3); margin-top: 8px; }
+  .flashcard-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+  .fc-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-family: inherit;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .fc-btn:hover { border-color: var(--border2); color: var(--text); }
+  .fc-counter { font-size: 11px; color: var(--text3); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+
+  /* LOADING OVERLAY */
+  #loadingOverlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    transition: opacity 0.4s;
+    gap: 16px;
+  }
+  .loading-logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 40px;
+    color: var(--accent2);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .loading-text { font-size: 13px; color: var(--text3); letter-spacing: 2px; }
+
+  /* ACHIEVEMENT TOAST */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid rgba(52,211,153,0.3);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 100;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    pointer-events: none;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast-icon { font-size: 20px; }
+
+  /* MOOD ADAPTIVE UI */
+  body.mood-focused { --accent: #2dd4bf; --accent2: #5eead4; }
+  body.mood-stressed { --accent: #f87171; --accent2: #fca5a5; }
+  body.mood-curious { --accent: #f59e0b; --accent2: #fbbf24; }
+  body.mood-confident { --accent: #10b981; --accent2: #34d399; }
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+  <div class="loading-logo">ASAP</div>
+  <div class="loading-text">INITIALIZING AI STUDY PLATFORM</div>
+</div>
+
+<div id="toast">
+  <span id="toast-icon">🏆</span>
+  <span id="toast-msg">Achievement unlocked!</span>
+</div>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">ASAP</div>
+      <div class="logo-sub">Study Platform</div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navigation</div>
+      <button class="nav-btn active" onclick="setView('chat')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        AI Tutor
+      </button>
+      <button class="nav-btn" onclick="setView('quiz')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Quiz Mode
+      </button>
+      <button class="nav-btn" onclick="setView('notes')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Smart Notes
+      </button>
+      <button class="nav-btn" onclick="setView('analytics')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Analytics
+      </button>
+    </div>
+
+    <!-- MOOD SELECTOR -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Mood Check-in</div>
+      <div class="mood-panel">
+        <div class="mood-title">How are you feeling?</div>
+        <div class="mood-grid">
+          <button class="mood-btn" data-mood="focused" data-energy="90" onclick="setMood(this)">
+            <span class="mood-emoji">🎯</span>
+            <span class="mood-label">Focused</span>
+          </button>
+          <button class="mood-btn" data-mood="curious" data-energy="75" onclick="setMood(this)">
+            <span class="mood-emoji">🤔</span>
+            <span class="mood-label">Curious</span>
+          </button>
+          <button class="mood-btn selected" data-mood="confident" data-energy="80" onclick="setMood(this)">
+            <span class="mood-emoji">💪</span>
+            <span class="mood-label">Confident</span>
+          </button>
+          <button class="mood-btn" data-mood="stressed" data-energy="30" onclick="setMood(this)">
+            <span class="mood-emoji">😓</span>
+            <span class="mood-label">Stressed</span>
+          </button>
+          <button class="mood-btn" data-mood="tired" data-energy="20" onclick="setMood(this)">
+            <span class="mood-emoji">😴</span>
+            <span class="mood-label">Tired</span>
+          </button>
+          <button class="mood-btn" data-mood="excited" data-energy="95" onclick="setMood(this)">
+            <span class="mood-emoji">🚀</span>
+            <span class="mood-label">Excited</span>
+          </button>
+        </div>
+        <div class="mood-meter">
+          <div class="mood-fill" id="moodFill" style="width:80%"></div>
+        </div>
+        <div class="mood-status" id="moodStatus">Energy: High — Adaptive mode: Deep Focus</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="page-title" id="pageTitle">AI Tutor</span>
+        <span class="subject-tag" id="subjectTag">Mathematics</span>
+      </div>
+      <div class="topbar-right">
+        <div class="streak-badge">🔥 <span id="streakCount">7</span> day streak</div>
+        <select class="subject-select" id="subjectSelect" onchange="changeSubject(this.value)">
+          <option value="Mathematics">Mathematics</option>
+          <option value="Physics">Physics</option>
+          <option value="Chemistry">Chemistry</option>
+          <option value="Biology">Biology</option>
+          <option value="History">History</option>
+          <option value="Literature">Literature</option>
+          <option value="Computer Science">Computer Science</option>
+          <option value="Economics">Economics</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- CHAT PANEL -->
+      <div class="chat-panel">
+        <div class="messages" id="messages"></div>
+
+        <div class="input-bar">
+          <div class="quick-actions" id="quickActions">
+            <button class="quick-btn" onclick="quickAsk('Explain this concept step by step')">📚 Explain step by step</button>
+            <button class="quick-btn" onclick="quickAsk('Give me a practice problem')">✏️ Practice problem</button>
+            <button class="quick-btn" onclick="quickAsk('Summarize key formulas')">📐 Key formulas</button>
+            <button class="quick-btn" onclick="quickAsk('Test my understanding')">🧪 Test me</button>
+          </div>
+          <div class="input-row">
+            <textarea id="userInput" placeholder="Ask anything about your studies..." rows="1"
+              onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+            <div class="input-actions">
+              <button class="icon-btn" title="Voice input" onclick="voiceClick()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/>
+                  <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+              </button>
+              <button class="send-btn" onclick="sendMessage()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL -->
+      <div class="right-panel">
+
+        <!-- SESSION STATS -->
+        <div class="panel-card">
+          <div class="panel-card-title">Session Stats</div>
+          <div class="stat-grid">
+            <div class="stat-item">
+              <div class="stat-num" id="statQuestions">0</div>
+              <div class="stat-unit">asked</div>
+              <div class="stat-label">Questions</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-num" id="statTime">0</div>
+              <div class="stat-unit">min</div>
+              <div class="stat-label">Study time</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-num" id="statCorrect">0</div>
+              <div class="stat-unit">%</div>
+              <div class="stat-label">Accuracy</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-num" id="statXP">0</div>
+              <div class="stat-unit">xp</div>
+              <div class="stat-label">Earned</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FOCUS TIMER -->
+        <div class="panel-card">
+          <div class="panel-card-title">Pomodoro Timer</div>
+          <div class="timer-display">
+            <div class="timer-ring">
+              <svg width="90" height="90" viewBox="0 0 90 90">
+                <circle class="ring-bg" cx="45" cy="45" r="39"/>
+                <circle class="ring-fill" id="timerRing" cx="45" cy="45" r="39"/>
+              </svg>
+              <div class="timer-time" id="timerDisplay">25:00</div>
+            </div>
+            <div class="timer-label" id="timerLabel">Focus session</div>
+            <div class="timer-btns">
+              <button class="timer-btn" id="timerStartBtn" onclick="toggleTimer()">Start</button>
+              <button class="timer-btn" onclick="resetTimer()">Reset</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TOPIC PROGRESS -->
+        <div class="panel-card">
+          <div class="panel-card-title">Topic Progress</div>
+          <div class="topic-list" id="topicList"></div>
+        </div>
+
+        <!-- FLASHCARD -->
+        <div class="panel-card">
+          <div class="panel-card-title">Quick Flashcard</div>
+          <div class="flashcard" id="flashcard" onclick="flipCard()">
+            <div>
+              <div id="cardContent">Loading card...</div>
+              <div class="flip-hint">Click to reveal answer</div>
+            </div>
+          </div>
+          <div class="flashcard-nav">
+            <button class="fc-btn" onclick="prevCard()">← Prev</button>
+            <span class="fc-counter" id="cardCounter">1 / 5</span>
+            <button class="fc-btn" onclick="nextCard()">Next →</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const state = {
+  mood: 'confident',
+  moodEnergy: 80,
+  subject: 'Mathematics',
+  sessionStart: Date.now(),
+  questions: 0,
+  xp: 0,
+  correct: 0,
+  quizTotal: 0,
+  timerRunning: false,
+  timerSeconds: 25 * 60,
+  timerTotal: 25 * 60,
+  timerInterval: null,
+  cardIndex: 0,
+  cardFlipped: false,
+  history: [],
+};
+
+const ANTHROPIC_KEY = ''; // Leave blank — handled by proxy
+const API_URL = 'https://api.anthropic.com/v1/messages';
+
+// ─── SUBJECT DATA ─────────────────────────────────────────────────────────────
+const subjectData = {
+  'Mathematics': {
+    topics: [
+      { name: 'Algebra', pct: 72, color: '#7c6af7' },
+      { name: 'Calculus', pct: 45, color: '#2dd4bf' },
+      { name: 'Statistics', pct: 60, color: '#fbbf24' },
+      { name: 'Geometry', pct: 83, color: '#34d399' },
+    ],
+    cards: [
+      { q: 'What is the quadratic formula?', a: 'x = (−b ± √(b² − 4ac)) / 2a' },
+      { q: 'What is the derivative of sin(x)?', a: 'cos(x)' },
+      { q: 'Pythagorean theorem?', a: 'a² + b² = c²' },
+      { q: 'Euler\'s identity?', a: 'e^(iπ) + 1 = 0' },
+      { q: 'Formula for area of a circle?', a: 'A = πr²' },
+    ]
+  },
+  'Physics': {
+    topics: [
+      { name: 'Mechanics', pct: 65, color: '#7c6af7' },
+      { name: 'Electromagnetism', pct: 40, color: '#f87171' },
+      { name: 'Thermodynamics', pct: 55, color: '#fbbf24' },
+      { name: 'Quantum', pct: 25, color: '#2dd4bf' },
+    ],
+    cards: [
+      { q: 'Newton\'s second law?', a: 'F = ma (Force = mass × acceleration)' },
+      { q: 'What is Ohm\'s law?', a: 'V = IR (Voltage = Current × Resistance)' },
+      { q: 'Speed of light?', a: 'c ≈ 3 × 10⁸ m/s' },
+      { q: 'Planck\'s equation?', a: 'E = hf (Energy = Planck\'s constant × frequency)' },
+      { q: 'Gravitational force formula?', a: 'F = Gm₁m₂/r²' },
+    ]
+  },
+  'Computer Science': {
+    topics: [
+      { name: 'Algorithms', pct: 70, color: '#7c6af7' },
+      { name: 'Data Structures', pct: 60, color: '#2dd4bf' },
+      { name: 'Databases', pct: 50, color: '#fbbf24' },
+      { name: 'Networks', pct: 35, color: '#34d399' },
+    ],
+    cards: [
+      { q: 'Time complexity of binary search?', a: 'O(log n)' },
+      { q: 'What is a stack?', a: 'LIFO (Last In First Out) data structure' },
+      { q: 'What does SQL stand for?', a: 'Structured Query Language' },
+      { q: 'Big-O of bubble sort?', a: 'O(n²) average and worst case' },
+      { q: 'What is recursion?', a: 'A function that calls itself with a base case to stop' },
+    ]
+  }
+};
+
+// Default topics for other subjects
+function getSubjectData(subject) {
+  return subjectData[subject] || {
+    topics: [
+      { name: 'Core Concepts', pct: 60, color: '#7c6af7' },
+      { name: 'Applied Theory', pct: 45, color: '#2dd4bf' },
+      { name: 'Problem Solving', pct: 70, color: '#fbbf24' },
+      { name: 'Advanced Topics', pct: 30, color: '#34d399' },
+    ],
+    cards: [
+      { q: 'Ask your AI tutor for flashcards!', a: 'Type "give me flashcards on [topic]" to generate custom study cards.' },
+      { q: 'How do I get started?', a: 'Select a subject, set your mood, and start asking questions!' },
+    ]
+  };
+}
+
+// ─── MOOD SYSTEM ─────────────────────────────────────────────────────────────
+const moodProfiles = {
+  focused:   { label: 'Energy: Very High — Deep Focus mode activated', bodyClass: 'mood-focused', system: 'The student is in deep focus mode. Give precise, detailed explanations. Use structured lists and step-by-step breakdowns. No fluff — be efficient.' },
+  curious:   { label: 'Energy: High — Exploration mode', bodyClass: 'mood-curious', system: 'The student is curious and exploratory. Give interesting context, real-world connections, and "fun fact" asides. Spark wonder!' },
+  confident: { label: 'Energy: High — Adaptive mode: Deep Focus', bodyClass: 'mood-confident', system: 'The student feels confident. Give challenging explanations. Push their understanding further. Ask them to derive or prove things.' },
+  stressed:  { label: 'Energy: Low — Calm & supportive mode', bodyClass: 'mood-stressed', system: 'The student is stressed. Be very calm, encouraging, and break things down simply. Add reassurance. Short sentences. No overwhelming info.' },
+  tired:     { label: 'Energy: Very Low — Gentle mode', bodyClass: '', system: 'The student is tired. Keep answers brief, friendly, and easy. Use mnemonics and memorable hooks. Suggest taking breaks.' },
+  excited:   { label: 'Energy: Maximum — High-octane mode', bodyClass: '', system: 'The student is excited! Match their energy. Use enthusiasm. Give rich, comprehensive answers. Cover advanced extensions.' },
+};
+
+function setMood(btn) {
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  const mood = btn.dataset.mood;
+  const energy = parseInt(btn.dataset.energy);
+  state.mood = mood;
+  state.moodEnergy = energy;
+  document.getElementById('moodFill').style.width = energy + '%';
+  const profile = moodProfiles[mood];
+  document.getElementById('moodStatus').textContent = profile.label;
+  // Remove old mood classes
+  Object.values(moodProfiles).forEach(p => { if (p.bodyClass) document.body.classList.remove(p.bodyClass); });
+  if (profile.bodyClass) document.body.classList.add(profile.bodyClass);
+  // Add mood acknowledgement message
+  const moodMessages = {
+    focused:   '🎯 Focus mode activated! I\'ll give you crisp, structured answers.',
+    curious:   '🤔 Curiosity mode! I\'ll share interesting context and real-world connections.',
+    confident: '💪 Let\'s push your limits! I\'ll give you challenging material.',
+    stressed:  '😓 I\'ve got you. Let\'s take it slow and break things down simply. Breathe!',
+    tired:     '😴 No problem — short and sweet answers coming up. Rest is important too!',
+    excited:   '🚀 Let\'s GO! Matching your energy — comprehensive, fast-paced learning!',
+  };
+  addSystemMsg(moodMessages[mood] || 'Mood updated!');
+}
+
+// ─── CHAT FUNCTIONS ──────────────────────────────────────────────────────────
+function addSystemMsg(text) {
+  addMessage('ai', text, true);
+}
+
+function addMessage(role, content, isMoodAck = false) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const avatar = document.createElement('div');
+  avatar.className = `msg-avatar ${role}`;
+  avatar.textContent = role === 'ai' ? 'AI' : 'You';
+  const body = document.createElement('div');
+  body.className = 'msg-body';
+  const name = document.createElement('div');
+  name.className = 'msg-name';
+  name.textContent = role === 'ai' ? 'ASAP Tutor' : 'You';
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${role}`;
+  bubble.innerHTML = formatContent(content);
+  body.appendChild(name);
+  body.appendChild(bubble);
+  if (isMoodAck && role === 'ai') {
+    const tag = document.createElement('div');
+    tag.className = 'mood-tag';
+    tag.innerHTML = `✦ Mood: ${state.mood}`;
+    body.appendChild(tag);
+  }
+  div.appendChild(avatar);
+  div.appendChild(body);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function formatContent(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\$([^$]+)\$/g, '<span class="math">$1</span>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+    .replace(/\n/g, '<br>');
+}
+
+function showTyping() {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.id = 'typingIndicator';
+  div.innerHTML = `
+    <div class="msg-avatar ai">AI</div>
+    <div class="msg-body">
+      <div class="msg-name">ASAP Tutor</div>
+      <div class="bubble ai"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+    </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typingIndicator');
+  if (t) t.remove();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  autoResize(input);
+  addMessage('user', text);
+  state.history.push({ role: 'user', content: text });
+  state.questions++;
+  state.xp += 10;
+  updateStats();
+  showTyping();
+  try {
+    const profile = moodProfiles[state.mood] || moodProfiles.confident;
+    const sysPrompt = `You are ASAP, an expert AI study tutor specializing in ${state.subject}. ${profile.system}
+Format: Use **bold** for key terms, \`code\` for formulas/code, $math$ for math expressions. Keep answers educational, accurate, and engaging. Max 300 words unless a long explanation is essential.`;
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: sysPrompt,
+        messages: state.history.slice(-10),
+      })
+    });
+    const data = await response.json();
+    removeTyping();
+    const reply = data.content?.[0]?.text || 'I had trouble connecting. Please try again.';
+    state.history.push({ role: 'assistant', content: reply });
+    addMessage('ai', reply);
+    state.xp += 15;
+    updateStats();
+    checkAchievements();
+  } catch (err) {
+    removeTyping();
+    addMessage('ai', '⚠️ Connection issue. Check your API key or network, then try again.');
+  }
+}
+
+function quickAsk(prompt) {
+  document.getElementById('userInput').value = prompt + ' for ' + state.subject;
+  sendMessage();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function voiceClick() {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    showToast('🎤', 'Speech recognition not supported in this browser');
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rec = new SR();
+  rec.lang = 'en-US';
+  rec.onresult = e => {
+    document.getElementById('userInput').value = e.results[0][0].transcript;
+    autoResize(document.getElementById('userInput'));
+  };
+  rec.start();
+  showToast('🎤', 'Listening... speak now');
+}
+
+// ─── TIMER ───────────────────────────────────────────────────────────────────
+function toggleTimer() {
+  if (state.timerRunning) {
+    clearInterval(state.timerInterval);
+    state.timerRunning = false;
+    document.getElementById('timerStartBtn').textContent = 'Resume';
+    document.getElementById('timerStartBtn').classList.remove('active');
+  } else {
+    state.timerRunning = true;
+    document.getElementById('timerStartBtn').textContent = 'Pause';
+    document.getElementById('timerStartBtn').classList.add('active');
+    state.timerInterval = setInterval(() => {
+      state.timerSeconds--;
+      updateTimerDisplay();
+      if (state.timerSeconds <= 0) {
+        clearInterval(state.timerInterval);
+        state.timerRunning = false;
+        document.getElementById('timerStartBtn').textContent = 'Start';
+        document.getElementById('timerStartBtn').classList.remove('active');
+        showToast('⏰', 'Pomodoro complete! Take a 5-min break.');
+        state.timerSeconds = 5 * 60;
+        state.timerTotal = 5 * 60;
+        document.getElementById('timerLabel').textContent = 'Break time!';
+        updateTimerDisplay();
+        state.xp += 50;
+        updateStats();
+      }
+    }, 1000);
+  }
+}
+
+function resetTimer() {
+  clearInterval(state.timerInterval);
+  state.timerRunning = false;
+  state.timerSeconds = 25 * 60;
+  state.timerTotal = 25 * 60;
+  document.getElementById('timerStartBtn').textContent = 'Start';
+  document.getElementById('timerStartBtn').classList.remove('active');
+  document.getElementById('timerLabel').textContent = 'Focus session';
+  updateTimerDisplay();
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(state.timerSeconds / 60).toString().padStart(2, '0');
+  const s = (state.timerSeconds % 60).toString().padStart(2, '0');
+  document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+  const progress = 1 - state.timerSeconds / state.timerTotal;
+  const circumference = 245;
+  document.getElementById('timerRing').style.strokeDashoffset = circumference * (1 - progress);
+}
+
+// ─── SUBJECT CHANGE ──────────────────────────────────────────────────────────
+function changeSubject(subject) {
+  state.subject = subject;
+  document.getElementById('subjectTag').textContent = subject;
+  state.cardIndex = 0;
+  state.cardFlipped = false;
+  renderTopics();
+  updateCard();
+  addMessage('ai', `Switching to **${subject}**! I'm ready to help you master this subject. What would you like to explore?`);
+  state.history = [];
+}
+
+// ─── TOPICS ──────────────────────────────────────────────────────────────────
+function renderTopics() {
+  const data = getSubjectData(state.subject);
+  const container = document.getElementById('topicList');
+  container.innerHTML = data.topics.map(t => `
+    <div class="topic-item">
+      <div class="topic-info">
+        <span class="topic-name">${t.name}</span>
+        <span class="topic-pct">${t.pct}%</span>
+      </div>
+      <div class="prog-bar">
+        <div class="prog-fill" style="width:${t.pct}%; background:${t.color}"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── FLASHCARDS ──────────────────────────────────────────────────────────────
+function updateCard() {
+  const data = getSubjectData(state.subject);
+  const cards = data.cards;
+  const card = cards[state.cardIndex % cards.length];
+  document.getElementById('cardContent').textContent = state.cardFlipped ? card.a : card.q;
+  document.getElementById('cardCounter').textContent = `${(state.cardIndex % cards.length) + 1} / ${cards.length}`;
+  document.querySelector('.flip-hint').textContent = state.cardFlipped ? '✓ Answer' : 'Click to reveal answer';
+}
+
+function flipCard() {
+  state.cardFlipped = !state.cardFlipped;
+  document.getElementById('flashcard').style.transform = state.cardFlipped ? 'scale(1.02)' : 'scale(1)';
+  setTimeout(() => document.getElementById('flashcard').style.transform = 'scale(1)', 200);
+  updateCard();
+  if (state.cardFlipped) { state.xp += 5; updateStats(); }
+}
+
+function nextCard() {
+  state.cardIndex++;
+  state.cardFlipped = false;
+  updateCard();
+}
+
+function prevCard() {
+  const data = getSubjectData(state.subject);
+  state.cardIndex = Math.max(0, state.cardIndex - 1);
+  state.cardFlipped = false;
+  updateCard();
+}
+
+// ─── STATS ───────────────────────────────────────────────────────────────────
+function updateStats() {
+  document.getElementById('statQuestions').textContent = state.questions;
+  document.getElementById('statTime').textContent = Math.floor((Date.now() - state.sessionStart) / 60000);
+  document.getElementById('statXP').textContent = state.xp;
+  const acc = state.quizTotal > 0 ? Math.round((state.correct / state.quizTotal) * 100) : '--';
+  document.getElementById('statCorrect').textContent = acc;
+}
+
+setInterval(updateStats, 30000);
+
+// ─── ACHIEVEMENTS ────────────────────────────────────────────────────────────
+const achievements = [
+  { threshold: 1,   key: 'first', icon: '✨', msg: 'First question asked!' },
+  { threshold: 5,   key: 'five', icon: '🌟', msg: '5 questions — on a roll!' },
+  { threshold: 50,  key: 'xp50', icon: '⚡', msg: '50 XP earned!' },
+  { threshold: 100, key: 'xp100', icon: '🏆', msg: '100 XP — you\'re crushing it!' },
+];
+const earned = new Set();
+
+function checkAchievements() {
+  achievements.forEach(a => {
+    if (!earned.has(a.key)) {
+      if ((a.key.startsWith('xp') && state.xp >= parseInt(a.key.replace('xp',''))) ||
+          (a.key === 'first' && state.questions >= 1) ||
+          (a.key === 'five' && state.questions >= 5)) {
+        earned.add(a.key);
+        showToast(a.icon, a.msg);
+      }
+    }
+  });
+}
+
+function showToast(icon, msg) {
+  document.getElementById('toast-icon').textContent = icon;
+  document.getElementById('toast-msg').textContent = msg;
+  const toast = document.getElementById('toast');
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ─── VIEW SWITCHER ────────────────────────────────────────────────────────────
+function setView(view) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  event.target.closest('.nav-btn').classList.add('active');
+  const titles = { chat: 'AI Tutor', quiz: 'Quiz Mode', notes: 'Smart Notes', analytics: 'Analytics' };
+  document.getElementById('pageTitle').textContent = titles[view] || 'AI Tutor';
+  if (view !== 'chat') {
+    showToast('🚧', `${titles[view]} — coming soon! Use AI Tutor for now.`);
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function init() {
+  renderTopics();
+  updateCard();
+  updateTimerDisplay();
+  updateStats();
+  // Welcome message
+  setTimeout(() => {
+    addMessage('ai',
+      `Welcome to **ASAP** — your AI Study Assistant! 🎓\n\nI'm ready to help you master **${state.subject}**. I've detected your mood as *confident* and will tailor my teaching style accordingly.\n\n**Here's what I can do:**\n- Explain concepts step by step\n- Generate practice problems\n- Quiz you on any topic\n- Summarize key formulas\n- Adapt to your mood in real-time\n\nWhat would you like to study today?`
+    );
+  }, 600);
+}
+
+// Hide loading overlay
+window.onload = () => {
+  setTimeout(() => {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.style.display = 'none', 400);
+    init();
+  }, 1200);
+};
+</script>
+</body>
+</html>
